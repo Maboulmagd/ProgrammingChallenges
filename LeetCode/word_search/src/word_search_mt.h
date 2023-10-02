@@ -14,12 +14,12 @@
 #include <utility>
 #include <unordered_set>
 
-#include "WordSearch.h"
+#include "word_search.h"
 
 class WordSearchMT : public virtual WordSearch {
     public:
-        explicit WordSearchMT();
-        virtual ~WordSearchMT();
+        explicit WordSearchMT(){};
+        virtual ~WordSearchMT(){};
         WordSearchMT(const WordSearchMT&) = delete;
         const WordSearchMT& operator=(const WordSearchMT&) = delete;
 

@@ -2,8 +2,7 @@
 // Created by Mo Aboulmagd on 1/18/21.
 //
 
-#include "gtest/gtest.h"
-#include "../src/WordSearch.h"
+#include "include.h"
 #include "../src/WordSearchST.h"
 #include "../src/WordSearchMT.h"
 

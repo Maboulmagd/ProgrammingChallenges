@@ -8,6 +8,13 @@
 #include <vector>
 #include <string>
 
+struct Cell {
+    int row_;
+    int col_;
+    int currIndex_;
+    explicit Cell(int row, int col, int currIndex) : row_(row), col_(col), currIndex_(currIndex) {}
+};
+
 class WordSearch {
 public:
     explicit WordSearch();

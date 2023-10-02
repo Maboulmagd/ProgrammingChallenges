@@ -5,17 +5,11 @@
 #include "WordSearchMT.h"
 #include <thread>
 
-WordSearchMT::WordSearchMT() {
-
-}
-
-WordSearchMT::~WordSearchMT() {
-
-}
-
 // TODO: Try using an atomic_bool.
-//       Also need to try defining std::hash that works with std::pair.
-//       Remember to test performance differences!
+//       Also need to define std::hash that works with std::pair.
+//       Remember to have some performance tests!
+//       After fixing this, I suggest using a thread pool that I build on my own as a separate project,
+//       and add it here as some third party software.
 bool WordSearchMT::exist(std::vector<std::vector<char>> board, std::string word) const {
     const size_t rows = board.size();
     const size_t cols = board[0].size();
