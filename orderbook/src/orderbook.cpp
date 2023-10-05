@@ -24,13 +24,13 @@ std::list<std::string> OrderBook::insertOrderInBook(const Order &new_order) {
             Order *order = new Order(new_order);
 
             // No sell orders OR current lowest sell is too high, add buy order to buy side of the book
-            if (sell_side.empty() || sell_side.begin()->second.limit_px > order->px) {
+            if (sell_side.empty() || sell_side.begin()->second->limit_px > order->px) {
                 addOrderToBook(order);
             }
             // Best sell is less than or equal to buy order's price, match buy order
             else {
-                while (!sell_side.empty() && sell_side.begin()->second.limit_px <= order->px && order->qty > 0) {
-                    Limit &lowest_sell = sell_side.begin()->second;
+                while (!sell_side.empty() && sell_side.begin()->second->limit_px <= order->px && order->qty > 0) {
+                    Limit *lowest_sell = sell_side.begin()->second.get();
 
                     matchBuyOrder(lowest_sell, order, trades);//Match with all possible sell orders at lowest_sell
 
@@ -38,12 +38,12 @@ std::list<std::string> OrderBook::insertOrderInBook(const Order &new_order) {
                     deleteOrdersWithZeroQty(lowest_sell);
 
                     // Time to delete this limit price
-                    if (lowest_sell.head == nullptr) {
+                    if (lowest_sell->head == nullptr) {
                         // Sanity checks
-                        assert(lowest_sell.head == nullptr);
-                        assert(lowest_sell.tail == nullptr);
+                        assert(lowest_sell->head == nullptr);
+                        assert(lowest_sell->tail == nullptr);
 
-                        sell_side.erase(lowest_sell.limit_px);
+                        sell_side.erase(lowest_sell->limit_px);
                     }
                 }
 
@@ -60,14 +60,14 @@ std::list<std::string> OrderBook::insertOrderInBook(const Order &new_order) {
             Order *order = new Order(new_order);
 
             // No buy orders OR current highest buy is too low, add sell order to sell side of the book
-            if (buy_side.empty() || buy_side.begin()->second.limit_px < order->px) {
+            if (buy_side.empty() || buy_side.begin()->second->limit_px < order->px) {
                 addOrderToBook(order);
             }
 
             // Best buy is greater than or equal to sell order's price, match sell order
             else {
-                while (!buy_side.empty() && buy_side.begin()->second.limit_px >= order->px && order->qty > 0) {
-                    Limit &highest_buy = buy_side.begin()->second;
+                while (!buy_side.empty() && buy_side.begin()->second->limit_px >= order->px && order->qty > 0) {
+                    Limit *highest_buy = buy_side.begin()->second.get();
 
                     matchSellOrder(highest_buy, order, trades);//Match with all possible buy orders at highest_buy
 
@@ -75,12 +75,12 @@ std::list<std::string> OrderBook::insertOrderInBook(const Order &new_order) {
                     deleteOrdersWithZeroQty(highest_buy);
 
                     // Time to delete this limit price
-                    if (highest_buy.head == nullptr) {
+                    if (highest_buy->head == nullptr) {
                         // Sanity checks
-                        assert(highest_buy.head == nullptr);
-                        assert(highest_buy.tail == nullptr);
+                        assert(highest_buy->head == nullptr);
+                        assert(highest_buy->tail == nullptr);
 
-                        buy_side.erase(highest_buy.limit_px);
+                        buy_side.erase(highest_buy->limit_px);
                     }
                 }
 
@@ -110,7 +110,7 @@ void OrderBook::addOrderToBook(Order *order) {
         case 'B': {
             // Limit price already exists, simply add order to tail of list of orders belonging to limit
             if (buy_side.find(order->px) != buy_side.cend()) {
-                Limit &limit = buy_side[order->px];
+                Limit *limit = buy_side[order->px].get();
 
                 addOrderToTail(limit, order);
             }
@@ -118,13 +118,13 @@ void OrderBook::addOrderToBook(Order *order) {
             else {
                 assert(buy_side.find(order->px) == buy_side.cend());
 
-                Limit new_limit;
-                new_limit.limit_px = order->px;
+                std::unique_ptr<Limit> new_limit = std::make_unique<Limit>();
+                new_limit->limit_px = order->px;
 
-                addOrderToTail(new_limit, order);
+                addOrderToTail(new_limit.get(), order);
 
-                buy_side[new_limit.limit_px] = new_limit;
-                // Issue is Limit goes out of scope here and so calls destructor, I want to make sure we are making a copy of new_limit
+                // TODO Issue is Limit goes out of scope here and so calls destructor, I want to make sure we are making a copy of new_limit
+                buy_side[new_limit->limit_px] = std::move(new_limit);
             }
 
             break;
@@ -133,7 +133,7 @@ void OrderBook::addOrderToBook(Order *order) {
         case 'S': {
             // Limit price already exists, simply add order to tail of list of orders belonging to limit
             if (sell_side.find(order->px) != sell_side.cend()) {
-                Limit& limit = sell_side[order->px];
+                Limit *limit = sell_side[order->px].get();
 
                 addOrderToTail(limit, order);
             }
@@ -141,12 +141,12 @@ void OrderBook::addOrderToBook(Order *order) {
             else {
                 assert(sell_side.find(order->px) == sell_side.cend());
 
-                Limit new_limit;
-                new_limit.limit_px = order->px;
+                std::unique_ptr<Limit> new_limit = std::make_unique<Limit>();
+                new_limit->limit_px = order->px;
 
-                addOrderToTail(new_limit, order);
+                addOrderToTail(new_limit.get(), order);
 
-                sell_side[new_limit.limit_px] = new_limit;
+                sell_side[new_limit->limit_px] = std::move(new_limit);
             }
 
             break;
@@ -159,47 +159,50 @@ void OrderBook::addOrderToBook(Order *order) {
     orders_[order->id] = order;
 }
 
-void OrderBook::addOrderToTail(Limit &limit, Order *order_to_add) {
+void OrderBook::addOrderToTail(Limit *limit, Order *order_to_add) {
+    // Sanity checks
+    assert(limit != nullptr);
     assert(order_to_add != nullptr);
 
     assert(order_to_add->next_order == nullptr);
     assert(order_to_add->prev_order == nullptr);
 
     // Empty list
-    if (limit.head == nullptr) {
-        assert(limit.tail == nullptr);
-        limit.head = order_to_add;
-        limit.tail = order_to_add;
+    if (limit->head == nullptr) {
+        assert(limit->tail == nullptr);
+        limit->head = order_to_add;
+        limit->tail = order_to_add;
     }
-        // Singleton list
-    else if (limit.head->next_order == nullptr) {
-        assert(limit.head == limit.tail);
+    // Singleton list
+    else if (limit->head->next_order == nullptr) {
+        assert(limit->head == limit->tail);
 
-        limit.head->next_order = order_to_add;
-        order_to_add->prev_order = limit.head;
+        limit->head->next_order = order_to_add;
+        order_to_add->prev_order = limit->head;
 
-        limit.tail = order_to_add;
+        limit->tail = order_to_add;
     }
-        // List with at least 2 nodes
+    // List with at least 2 nodes
     else {
-        assert(limit.head != nullptr);
-        assert(limit.tail != nullptr);
-        assert(limit.head != limit.tail);
+        assert(limit->head != nullptr);
+        assert(limit->tail != nullptr);
+        assert(limit->head != limit->tail);
 
-        limit.tail->next_order = order_to_add;
-        order_to_add->prev_order = limit.tail;
+        limit->tail->next_order = order_to_add;
+        order_to_add->prev_order = limit->tail;
 
-        limit.tail = order_to_add;
+        limit->tail = order_to_add;
     }
 
-    limit.qty += order_to_add->qty;
+    limit->qty += order_to_add->qty;
 }
 
 void OrderBook::deleteOrderFromList(Limit *&parent_limit, Order *&order_to_remove) {
     // Sanity checks
     assert(parent_limit != nullptr);
     assert(order_to_remove != nullptr);
-    assert(order_to_remove->qty == 0);
+    // Does not have to necessarily be 0, since an order can be cancelled...
+    //assert(order_to_remove->qty == 0);
 
     assert(parent_limit->head != nullptr);
     assert(parent_limit->tail != nullptr);
@@ -245,11 +248,11 @@ std::list<std::string> OrderBook::takeOrderOffBook(const uint32_t order_id) {
 
     Limit *limit = nullptr;
     if (side_of_book == 'S') {
-        limit = &sell_side[order_to_remove->px];
+        limit = sell_side[order_to_remove->px].get();
     }
     else {
         assert(side_of_book == 'B');
-        limit = &buy_side[order_to_remove->px];
+        limit = buy_side[order_to_remove->px].get();
     }
 
     deleteOrderFromList(limit, order_to_remove);
@@ -269,9 +272,11 @@ std::list<std::string> OrderBook::takeOrderOffBook(const uint32_t order_id) {
     return cancelled;
 }
 
-void OrderBook::matchBuyOrder(Limit &sell, Order *order, std::list<std::string>& trades) {
+void OrderBook::matchBuyOrder(Limit *sell, Order *order, std::list<std::string>& trades) {
+    assert(sell != nullptr);
+
     // Match buy order with sell orders associated with that limit
-    Order* sell_order = sell.head;
+    Order* sell_order = sell->head;
 
     while (sell_order != nullptr) {
         std::ostringstream formatted_price;
@@ -286,7 +291,7 @@ void OrderBook::matchBuyOrder(Limit &sell, Order *order, std::list<std::string>&
             trades.push_back("F " + std::to_string(sell_order->id) + ' ' + sell_order->symbol + ' ' + std::to_string(sell_order->qty) + ' ' +
                             px);
 
-            sell.qty -= sell_order->qty;
+            sell->qty -= sell_order->qty;
 
             sell_order->qty = 0;
             order->qty = 0;
@@ -301,7 +306,7 @@ void OrderBook::matchBuyOrder(Limit &sell, Order *order, std::list<std::string>&
             trades.push_back("F " + std::to_string(sell_order->id) + ' ' + sell_order->symbol + ' ' + std::to_string(order->qty) + ' ' +
                              px);
 
-            sell.qty -= order->qty;
+            sell->qty -= order->qty;
 
             sell_order->qty -= order->qty;
             order->qty = 0;
@@ -316,7 +321,7 @@ void OrderBook::matchBuyOrder(Limit &sell, Order *order, std::list<std::string>&
             trades.push_back("F " + std::to_string(sell_order->id) + ' ' + sell_order->symbol + ' ' + std::to_string(sell_order->qty) + ' ' +
                              px);
 
-            sell.qty -= sell_order->qty;
+            sell->qty -= sell_order->qty;
 
             order->qty -= sell_order->qty;
             sell_order->qty = 0;
@@ -326,9 +331,11 @@ void OrderBook::matchBuyOrder(Limit &sell, Order *order, std::list<std::string>&
     }
 }
 
-void OrderBook::matchSellOrder(Limit &buy, Order *order, std::list<std::string>& trades) {
+void OrderBook::matchSellOrder(Limit *buy, Order *order, std::list<std::string>& trades) {
+    assert(buy != nullptr);
+
     // Match sell order with buy orders associated with that limit
-    Order* buy_order = buy.head;
+    Order* buy_order = buy->head;
 
     while (buy_order != nullptr) {
         std::ostringstream formatted_price;
@@ -343,7 +350,7 @@ void OrderBook::matchSellOrder(Limit &buy, Order *order, std::list<std::string>&
             trades.push_back("F " + std::to_string(buy_order->id) + ' ' + buy_order->symbol + ' ' + std::to_string(buy_order->qty) + ' ' +
                              px);
 
-            buy.qty -= buy_order->qty;
+            buy->qty -= buy_order->qty;
 
             buy_order->qty = 0;
             order->qty = 0;
@@ -358,7 +365,7 @@ void OrderBook::matchSellOrder(Limit &buy, Order *order, std::list<std::string>&
             trades.push_back("F " + std::to_string(buy_order->id) + ' ' + buy_order->symbol + ' ' + std::to_string(order->qty) + ' ' +
                              px);
 
-            buy.qty -= order->qty;
+            buy->qty -= order->qty;
 
             buy_order->qty -= order->qty;
             order->qty = 0;
@@ -373,7 +380,7 @@ void OrderBook::matchSellOrder(Limit &buy, Order *order, std::list<std::string>&
             trades.push_back("F " + std::to_string(buy_order->id) + ' ' + buy_order->symbol + ' ' + std::to_string(buy_order->qty) + ' ' +
                              px);
 
-            buy.qty -= buy_order->qty;
+            buy->qty -= buy_order->qty;
 
             order->qty -= buy_order->qty;
             buy_order->qty = 0;
@@ -383,9 +390,10 @@ void OrderBook::matchSellOrder(Limit &buy, Order *order, std::list<std::string>&
     }
 }
 
-void OrderBook::deleteOrdersWithZeroQty(Limit &limit) {
+void OrderBook::deleteOrdersWithZeroQty(Limit *limit) {
     // Sanity checks
-    Order* current = limit.head;
+    assert(limit != nullptr);
+    Order* current = limit->head;
     assert(current->prev_order == nullptr);
 
     while (current != nullptr) {
@@ -397,14 +405,14 @@ void OrderBook::deleteOrdersWithZeroQty(Limit &limit) {
                 prev->next_order = next;
             }
             else {
-                limit.head = next;
+                limit->head = next;
             }
 
             if (next != nullptr) {
                 next->prev_order = prev;
             }
             else {
-                limit.tail = prev;
+                limit->tail = prev;
             }
 
             assert(orders_.find(current->id) != orders_.cend());
@@ -429,7 +437,7 @@ std::list<std::string> OrderBook::printOrderBook() {
 
 void OrderBook::printSellSide(std::list<std::string>& resting_orders) {
     for (const auto& [limit_px, limit] : sell_side) {
-        const Order* curr = limit.head;
+        const Order* curr = limit->head;
         while (curr != nullptr) {
             resting_orders.push_back("P " + std::to_string(curr->id) + ' ' + curr->symbol + ' ' + curr->side + ' ' +
                                      std::to_string(curr->qty) + ' ' + std::to_string(fixedPointToDouble(curr->px)));
@@ -441,7 +449,7 @@ void OrderBook::printSellSide(std::list<std::string>& resting_orders) {
 
 void OrderBook::printBuySide(std::list<std::string>& resting_orders) {
     for (const auto& [limit_px, limit] : buy_side) {
-        const Order *curr = limit.head;
+        const Order *curr = limit->head;
         while (curr != nullptr) {
             resting_orders.push_back("P " + std::to_string(curr->id) + ' ' + curr->symbol + ' ' + curr->side + ' ' +
                                      std::to_string(curr->qty) + ' ' + std::to_string(fixedPointToDouble(curr->px)));

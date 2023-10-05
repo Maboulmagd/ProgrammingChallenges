@@ -1,0 +1,18 @@
+/cmake-build-debug/
+/cmake_debug_build/
+/cmake_release_build/
+/.idea/
+/out/
+
+# Ignore all .vs files
+*.vs
+*.vscode
+
+# Ignore the out directory
+*.out
+
+# Ignore all image files with png file extension
+*.png
+
+# Ignore macOS files
+*.DS_Store

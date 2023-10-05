@@ -1,0 +1,140 @@
+/*
+These tests are by no means comprehensive, but a good measure of accuracy.
+1. Could use more tests regarding malformed input.
+2. Could use some tests for different symbols.
+*/
+
+// Example test
+O 10000 IBM B 10 100.00000
+O 10001 IBM B 10 99.00000
+O 10002 IBM S 5 101.00000
+O 10003 IBM S 5 100.00000
+O 10004 IBM S 5 100.00000
+X 10002
+O 10005 IBM B 10 99.00000
+O 10006 IBM B 10 100.00000
+O 10007 IBM S 10 101.00000
+O 10008 IBM S 10 102.00000
+O 10008 IBM S 10 102.00000
+O 10009 IBM S 10 102.00000
+P
+O 10010 IBM B 13 102.00000
+
+Example session: --> I noticed what I believe is to be an error this test's expected output
+    INPUT                                   | OUTPUT
+    ============================================================================
+    "O 10000 IBM B 10 100.00000"            | results.size() == 0
+    "O 10001 IBM B 10 99.00000"             | results.size() == 0
+    "O 10002 IBM S 5 101.00000"             | results.size() == 0
+    "O 10003 IBM S 5 100.00000"             | results.size() == 2
+                                            | results[0] == "F 10003 IBM 5 100.00000"
+                                            | results[1] == "F 10000 IBM 5 100.00000"
+    "O 10004 IBM S 5 100.00000"             | results.size() == 2
+                                            | results[0] == "F 10004 IBM 5 100.00000"
+                                            | results[1] == "F 10000 IBM 5 100.00000"
+    "X 10002"                               | results.size() == 1
+                                            | results[0] == "X 10002"
+    "O 10005 IBM B 10 99.00000"             | results.size() == 0
+    "O 10006 IBM B 10 100.00000"            | results.size() == 0
+    "O 10007 IBM S 10 101.00000"            | results.size() == 0
+    "O 10008 IBM S 10 102.00000"            | results.size() == 0
+    "O 10008 IBM S 10 102.00000"            | results.size() == 1
+                                            | results[0] == "E 10008 Duplicate order id"
+    "O 10009 IBM S 10 102.00000"            | results.size() == 0
+    "P"                                     | results.size() == 6
+                                            | results[0] == "P 10009 IBM S 10 102.00000" <-- This is supposed to be swapped with one below
+                                            | results[1] == "P 10008 IBM S 10 102.00000"
+                                            | results[2] == "P 10007 IBM S 10 101.00000"
+                                            | results[3] == "P 10006 IBM B 10 100.00000"
+                                            | results[4] == "P 10001 IBM B 10 99.00000"
+                                            | results[5] == "P 10005 IBM B 10 99.00000"
+    "O 10010 IBM B 13 102.00000"            | results.size() == 4
+                                            | results[0] == "F 10010 IBM 10 101.00000"
+                                            | results[1] == "F 10007 IBM 10 101.00000"
+                                            | results[2] == "F 10010 IBM 3 102.00000"
+                                            | results[3] == "F 10008 IBM 3 102.00000"
+
+
+// Increasing buys followed with a sell that consumes all, with no leftover qty
+O 1000 IBM B 10 100.00000
+O 1001 IBM B 10 110.00000
+O 1002 IBM B 10 120.00000
+O 1003 IBM B 20 120.00000
+O 1004 IBM B 30 130.00000
+O 1005 IBM S 80 90.00000
+P
+
+// Increasing buys followed with a sell that consumes all, but has leftover qty
+O 1000 IBM B 10 100.00000
+O 1001 IBM B 10 110.00000
+O 1002 IBM B 10 120.00000
+O 1003 IBM B 20 120.00000
+O 1004 IBM B 30 130.00000
+O 1005 IBM S 100 90.00000
+P
+
+// Increasing buys followed with resting sells, then a sell that consumes all, but has leftover qty
+O 1000 IBM B 10 100.00000
+O 1001 IBM B 10 110.00000
+O 1002 IBM B 10 120.00000
+O 1003 IBM B 20 120.00000
+O 1004 IBM B 30 130.00000
+O 1005 IBM S 50 200.00000
+O 1006 IBM S 120 210.00000
+O 1007 IBM S 11 205.00000
+O 1008 IBM S 75 207.00000
+O 1009 IBM S 100 90.00000
+P
+
+// Increasing sells followed with a buy that consumes all, with no leftover qty
+O 1 IBM S 10 100.00000
+O 2 IBM S 10 110.00000
+O 3 IBM S 10 120.00000
+O 4 IBM S 20 120.00000
+O 5 IBM S 30 130.00000
+O 6 IBM S 10 130.00000
+O 7 IBM B 90 200.00000
+P
+
+// Increasing sells followed with a buy that consumes all, but has leftover qty
+O 1000 IBM S 10 100.00000
+O 1001 IBM S 10 110.00000
+O 1002 IBM S 10 120.00000
+O 1003 IBM S 20 120.00000
+O 1004 IBM S 30 130.00000
+O 1005 IBM S 10 130.00000
+O 1006 IBM B 100 200.00000
+P
+
+// Simple one-sided buy order entries and 1 cancel
+O 1 IBM B 10 100.00000
+O 2 IBM B 10 110.00000
+O 3 IBM B 10 105.00000
+X 2
+P
+
+// Simple one-sided buy order entries and 1 cancel (head), limit remains
+O 1 IBM B 10 100.00000
+O 2 IBM B 10 110.00000
+O 3 IBM B 20 110.00000
+O 4 IBM B 10 105.00000
+X 2
+P
+
+// Simple one-sided buy order entries and 1 cancel (middle), limit remains
+O 1 IBM B 10 100.00000
+O 2 IBM B 10 110.00000
+O 3 IBM B 20 110.00000
+O 4 IBM B 30 110.00000
+O 5 IBM B 10 105.00000
+X 3
+P
+
+// Simple one-sided buy order entries and 1 cancel (tail), limit remains
+O 1 IBM B 10 100.00000
+O 2 IBM B 10 110.00000
+O 3 IBM B 20 110.00000
+O 4 IBM B 30 110.00000
+O 5 IBM B 10 105.00000
+X 4
+P

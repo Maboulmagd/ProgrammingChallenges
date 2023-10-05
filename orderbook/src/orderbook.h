@@ -6,6 +6,7 @@
 #include <list>
 #include <unordered_map>
 #include <map>
+#include <memory>
 
 class OrderBook final {
 public:
@@ -23,27 +24,27 @@ public:
 
     struct BuySideComp {
         bool operator()(const uint64_t lhs, const uint64_t rhs) const {
-            return lhs < rhs;
+            return lhs > rhs;
         }
     };
 
     struct SellSideComp {
         bool operator()(const uint64_t lhs, const uint64_t rhs) const {
-            return lhs > rhs;
+            return lhs < rhs;
         }
     };
 
-    std::map<uint64_t, Limit, BuySideComp> buy_side;
-    std::map<uint64_t, Limit, SellSideComp> sell_side;
+    std::map<uint64_t, std::unique_ptr<Limit>, BuySideComp> buy_side;
+    std::map<uint64_t, std::unique_ptr<Limit>, SellSideComp> sell_side;
 
 private:
     void addOrderToBook(Order *order);
 
-    void matchBuyOrder(Limit &sell, Order *order, std::list<std::string>& trades);
-    void matchSellOrder(Limit &buy, Order *order, std::list<std::string>& trades);
+    void matchBuyOrder(Limit *sell, Order *order, std::list<std::string>& trades);
+    void matchSellOrder(Limit *buy, Order *order, std::list<std::string>& trades);
 
-    void addOrderToTail(Limit &limit, Order *order_to_add);
-    void deleteOrdersWithZeroQty(Limit &limit);
+    void addOrderToTail(Limit *limit, Order *order_to_add);
+    void deleteOrdersWithZeroQty(Limit *limit);
     void deleteOrderFromList(Limit *&parent_limit, Order *&order_to_remove);
 
     void printSellSide(std::list<std::string>& resting_orders);
