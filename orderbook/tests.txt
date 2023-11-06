@@ -138,3 +138,24 @@ O 4 IBM B 30 110.00000
 O 5 IBM B 10 105.00000
 X 4
 P
+
+// Simple modify to quantity, and price
+O 1 IBM B 10 10.00000
+M 1 B 100 100.00000
+P
+
+// Simple modify to side, quantity, and price
+O 1 IBM B 1 10.00000
+M 1 S 10 100.00000
+P
+
+// Modify head
+
+
+
+// Modify middle
+
+
+
+// Modify tail
+

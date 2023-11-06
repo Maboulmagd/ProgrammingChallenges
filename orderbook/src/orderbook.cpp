@@ -426,6 +426,52 @@ void OrderBook::deleteOrdersWithZeroQty(Limit *limit) {
     }
 }
 
+std::list<std::string> OrderBook::modifyOrderInBook(const uint32_t order_id, const char side, const uint16_t qty, const double px) {
+    if (!orders_.contains(order_id)) {// old_id does not exist, nothing to do
+        return {"E: No order to modify"};
+    }
+
+    Order *old_order = orders_[order_id];
+    char book_side = old_order->side;
+
+    Limit *price = nullptr;
+    if (book_side == 'B') {
+        price = buy_side[old_order->px].get();
+    }
+    else {
+        price = sell_side[old_order->px].get();
+    }
+    assert(price != nullptr);
+
+    // Need a copy for new order
+    Order new_order(*old_order);
+
+    // Need to delete old order from its Limits' orders list
+    deleteOrderFromList(price, old_order);
+    assert(old_order == nullptr);
+
+    if (price->qty == 0) {
+        assert(price->head == nullptr);
+        assert(price->tail == nullptr);
+        if (book_side == 'B') {
+            buy_side.erase(price->limit_px);
+        }
+        else {
+            sell_side.erase(price->limit_px);
+        }
+    }
+
+    // Update old_order
+    new_order.qty = qty;
+    new_order.px = doubleToFixedPoint(px);
+    new_order.side = side;
+
+    // Finally insert it into book
+    insertOrderInBook(new_order);
+
+    return {};
+}
+
 std::list<std::string> OrderBook::printOrderBook() {
     std::list<std::string> resting_orders;
 

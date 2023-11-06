@@ -26,12 +26,14 @@ struct Order final {
 
     Order() : id(0), symbol("garbage"), side('B'), qty(0), px(0.0) {}
     Order(const Order& order) : id(order.id), side(order.side), qty(order.qty), px(order.px) {
-        strcpy(symbol, order.symbol);
+        strncpy(this->symbol, order.symbol, sizeof(this->symbol));
+        this->symbol[sizeof(this->symbol) - 1] = '\0'; // Ensure null-terminated string
     }
     // For testing
-    explicit Order(const int id, char* symbol, const char side, const int qty, const double px) noexcept :
+    explicit Order(const int id, char *symbol, const char side, const int qty, const double px) noexcept :
             id(id), side(side), qty(qty), px(doubleToFixedPoint(px)) {
-        strcpy(symbol, symbol);
+        strncpy(this->symbol, symbol, sizeof(this->symbol));
+        this->symbol[sizeof(this->symbol) - 1] = '\0'; // Ensure null-terminated string
     }
 };
 

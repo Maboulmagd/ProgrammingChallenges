@@ -21,7 +21,7 @@ protected:
 // Increasing buys followed with a sell that consumes all
 TEST_F(OrderBookTests, IncreasingBuysAndSellMatchesAll) {
     char symbol[8] = "IBM";
-    book_->insertOrderInBook(Order{1'000, symbol, 'B', 10, 100.000000});
+    book_->insertOrderInBook(Order(1'000, symbol, 'B', 10, 100.000000));
 
     ASSERT_TRUE(book_->orders_.contains(1'000));
     const uint64_t px = doubleToFixedPoint(100.000000);
@@ -1399,4 +1399,32 @@ TEST_F(OrderBookTests, RandomBuysFollowedWithCancellingTailOrder) {
     ASSERT_EQ(it->second->qty, 10);
     ASSERT_EQ(it->second->head->id, 1);
     ASSERT_EQ(it->second->tail->id, 1);
+}
+
+TEST_F(OrderBookTests, BasicModifyQtyPrice) {
+    char symbol[8] = "IBM";
+    book_->insertOrderInBook(Order{1, symbol, 'B', 1, 10.000000});
+
+    ASSERT_TRUE(book_->orders_.contains(1));
+    const uint64_t px = doubleToFixedPoint(10.000000);
+
+    ASSERT_TRUE(book_->sell_side.empty());
+
+    auto it = book_->buy_side.begin();
+    ASSERT_EQ(it->second->limit_px, px);
+    ASSERT_EQ(it->second->qty, 1);
+    ASSERT_EQ(it->second->head->id, 1);
+    ASSERT_EQ(it->second->tail->id, 1);
+
+    book_->modifyOrderInBook(1, 'B', 10, 100.000000);
+
+    ASSERT_TRUE(book_->orders_.contains(1));// Using same ID, ideally generate a new unique ID
+    const uint64_t new_px = doubleToFixedPoint(100.000000);
+
+    ASSERT_EQ(it->second->limit_px, new_px);
+    ASSERT_EQ(it->second->qty, 10);
+    ASSERT_EQ(it->second->head->id, 1);
+    ASSERT_EQ(it->second->tail->id, 1);
+
+    ASSERT_TRUE(book_->buy_side.size() == 1);
 }

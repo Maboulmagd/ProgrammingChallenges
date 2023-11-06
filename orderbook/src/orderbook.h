@@ -17,6 +17,7 @@ public:
 
     std::list<std::string> insertOrderInBook(const Order& new_order);
     std::list<std::string> takeOrderOffBook(const uint32_t order_id);
+    std::list<std::string> modifyOrderInBook(const uint32_t order_id, const char side, const uint16_t qty, const double px);
     std::list<std::string> printOrderBook();
 
     // Quick way to lookup if order already has same order_id

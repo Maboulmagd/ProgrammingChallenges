@@ -8,7 +8,7 @@ FetchContent_Declare(googletest URL https://github.com/google/googletest/archive
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-add_library(include include.h include.cpp ../chapter_01_arrays_and_strings/problem_01_01_is_unique.cpp)
+add_library(include include.h include.cpp)
 target_include_directories(include PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(include gtest_main gmock_main)
