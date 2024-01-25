@@ -3,8 +3,8 @@
 //
 
 #include "include.h"
-#include "../src/WordSearchST.h"
-#include "../src/WordSearchMT.h"
+#include "../src/word_search_st.h"
+#include "../src/word_search_mt.h"
 
 // Tests the single-threaded version of Word Search on basic input.
 TEST(WordSearchST_test, BasicTest) {

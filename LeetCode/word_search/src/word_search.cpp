@@ -2,7 +2,7 @@
 // Created by Mo Aboulmagd on 1/18/21.
 //
 
-#include "WordSearch.h"
+#include "word_search.h"
 
 WordSearch::WordSearch() {
     strategy_ = nullptr;

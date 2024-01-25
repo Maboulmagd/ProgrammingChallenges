@@ -1,3 +1,3 @@
 project(LeetCode)
 
-add_subdirectory(WordSearch)
+add_subdirectory(word_search)

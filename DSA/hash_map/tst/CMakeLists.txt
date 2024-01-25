@@ -1,0 +1,4 @@
+project(hash_map_tests)
+
+add_executable(hash_map_tests hash_map_tests.cpp)
+target_link_libraries(hash_map_tests hash_map_src include)

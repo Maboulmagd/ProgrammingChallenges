@@ -2,7 +2,7 @@
 // Created by Mo Aboulmagd on 1/18/21.
 //
 
-#include "WordSearchMT.h"
+#include "word_search_mt.h"
 #include <thread>
 
 // TODO: Try using an atomic_bool.

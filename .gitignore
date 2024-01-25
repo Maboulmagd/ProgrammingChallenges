@@ -3,6 +3,7 @@
 /clion_release_build/
 /.idea/
 /out/
+/build/
 
 # Ignore all .vs files
 *.vs

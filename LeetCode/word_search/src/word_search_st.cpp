@@ -2,7 +2,7 @@
 // Created by Mo Aboulmagd on 1/17/21.
 //
 
-#include "WordSearchST.h"
+#include "word_search_st.h"
 
 #include <unordered_set>
 #include <stack>
