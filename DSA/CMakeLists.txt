@@ -1,3 +1,4 @@
 project(DSA)
 
 add_subdirectory(hash_map)
+add_subdirectory(collision_detection_algorithms)

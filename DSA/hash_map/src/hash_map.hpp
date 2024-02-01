@@ -16,7 +16,7 @@ template <typename K, typename V>
 class HashMap final {
 public:
     void insert(const std::pair<K, V>& key_val) {
-
+        
     }
 
     std::size_t size() const {

@@ -1,0 +1,5 @@
+project(collision_detection_algorithms_src)
+
+add_library(collision_detection_algorithms_src rectangle_collisions.hpp polygon_collisions.hpp)
+target_include_directories(collision_detection_algorithms_src PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(collision_detection_algorithms_src include)

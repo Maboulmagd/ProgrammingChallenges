@@ -1,0 +1,4 @@
+project(collision_detection_algorithms_tests)
+
+add_executable(collision_detection_algorithms_tests rectangle_collisions_tests.cpp)
+target_link_libraries(collision_detection_algorithms_tests collision_detection_algorithms_src)
