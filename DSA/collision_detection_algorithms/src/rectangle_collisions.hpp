@@ -5,39 +5,8 @@
 
 #include "include.h"
 
-#include <system_error>
-#include <type_traits>
-#include <utility>
-
-enum class InputError {
-    OK = 0,
-    ERROR
-};
-
-struct InputErrorCategory : std::error_category {
-    const char* name() const noexcept override {
-        return "transaction";
-    }
-    std::string message(int condition) const override {
-        using namespace std::string_literals;
-        switch (condition) {
-            case 0 : return "OK"s;
-            case 1 : return "INPUT ERROR"s;
-        }
-        std::abort();// Unreachable
-    }
-};
-
-// Register the enum as an error code enum
-template<>
-struct std::is_error_code_enum<InputError> : public std::true_type {};
-
-// Mapping from error code enum to category
-std::error_code make_error_code(InputError e) {
-    static auto category = InputErrorCategory{};
-    return std::error_code(static_cast<int>(e), category);
-    //return std::error_code(std::to_underlying(e), category);
-}
+constexpr float EPSILON_FLOAT = 1e-9f;
+constexpr double EPSILON_DOUBLE = 1e-9;
 
 template <typename T>
 std::pair<std::error_code, bool> is_point_in_axis_aligned_rectangle(Point2D<T> p, Point2D<T> a, Point2D<T> b) noexcept {
@@ -92,25 +61,25 @@ std::pair<std::error_code, bool> is_point_in_non_axis_aligned_rectangle(Point2D<
         if (right) {
             // Get line equation, y = mx + b
             // Need to find slope, or m first
-            const int m = (a.y - b.y) / (a.x - b.x);// TODO Won't work if we have non-integer slope
+            const float m = (a.y - b.y) / (a.x - b.x);
             // Now get the y-intercept for that line (can use either point)
-            const int b = a.y - (m * a.x);
+            const float b = a.y - (m * a.x);
             
-            const int line_x_coordinate = (p.y - b) / m;
+            const float line_x_coordinate = (p.y - b) / m;
             // If point p's x-coordinate > the line's x-coordinate at the same y-coordinate as the point,
             // then point is right of the line, we MAY have collision
-            if (p.x == line_x_coordinate) {// We have collision
+            if (std::abs(p.x - line_x_coordinate) < EPSILON_FLOAT) {// We have collision
                 res = true;
                 broke_out = true;
                 break;
             }
-            else if (p.x < line_x_coordinate) {// No way we have a collision
+            else if (p.x < line_x_coordinate - EPSILON_FLOAT) {// No way we have a collision
                 res = false;
                 broke_out = true;
                 break;
             }
             else {
-                assert(p.x > b);
+                assert(p.x > line_x_coordinate + EPSILON_FLOAT);
                 res = true;
             }
 
@@ -122,25 +91,25 @@ std::pair<std::error_code, bool> is_point_in_non_axis_aligned_rectangle(Point2D<
 
             // Get line equation, y = mx + b
             // Need to find slope, or m first
-            const int m = (a.y - b.y) / (a.x - b.x);// TODO Won't work if we have non-integer slope
+            const float m = (a.y - b.y) / (a.x - b.x);
             // Now get the y-intercept for that line (can use either point)
-            const int b = a.y - (m * a.x);
+            const float b = a.y - (m * a.x);
 
-            const int line_x_coordinate = (p.y - b) / m;
+            const float line_x_coordinate = (p.y - b) / m;
             // If point p's x-coordinate < line's x-coordinate at the same y-coordinate as the point,
             // then point is left of the line, we MAY have collision
-            if (p.x == line_x_coordinate) {// We have collision
+            if (std::abs(p.x - line_x_coordinate) < EPSILON_FLOAT) {// We have collision
                 res = true;
                 broke_out = true;
                 break;
             }
-            else if (p.x > line_x_coordinate) {// No way we have a collision
+            else if (p.x > line_x_coordinate - EPSILON_FLOAT) {// No way we have a collision
                 res = false;
                 broke_out = true;
                 break;
             }   
             else {
-                assert(p.x < b);
+                assert(p.x < line_x_coordinate + EPSILON_FLOAT);
                 res = true;
             }
         }
@@ -154,20 +123,20 @@ std::pair<std::error_code, bool> is_point_in_non_axis_aligned_rectangle(Point2D<
         {
             // Get line equation, y = mx + b
             // Need to find slope, or m first
-            const int m = (a.y - b.y) / (a.x - b.x);// TODO Won't work if we have non-integer slope
+            const float m = (a.y - b.y) / (a.x - b.x);
             // Now get the y-intercept for that line (can use either point)
-            const int b = a.y - (m * a.x);
+            const float b = a.y - (m * a.x);
 
-            const int line_x_coordinate = (p.y - b) / m;
+            const float line_x_coordinate = (p.y - b) / m;
             // If point p's y-coordinate < the line's y-intercept, then point is left of the line, we MAY have collision
-            if (p.x == line_x_coordinate) {// We have collision
+            if (std::abs(p.x - line_x_coordinate) < EPSILON_FLOAT) {// We have collision
                 res = true;
             }
-            else if (p.x < line_x_coordinate) {// No way we have a collision
+            else if (p.x < line_x_coordinate - EPSILON_FLOAT) {// No way we have a collision
                 res = false;
             }
             else {
-                assert(p.x < line_x_coordinate);
+                assert(p.x > line_x_coordinate + EPSILON_FLOAT);
                 res = true;
             }
         }

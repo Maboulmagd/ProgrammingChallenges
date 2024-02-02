@@ -13,6 +13,9 @@
 #include <unordered_map>
 #include <queue>
 #include <stack>
+#include <system_error>
+#include <type_traits>
+#include <utility>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -58,3 +61,33 @@ struct Point2D {
     T x;
     T y;
 };
+
+enum class InputError {
+    OK = 0,
+    ERROR
+};
+
+struct InputErrorCategory : std::error_category {
+    const char* name() const noexcept override {
+        return "transaction";
+    }
+    std::string message(int condition) const override {
+        using namespace std::string_literals;
+        switch (condition) {
+            case 0 : return "OK"s;
+            case 1 : return "INPUT ERROR"s;
+        }
+        std::abort();// Unreachable
+    }
+};
+
+// Register the enum as an error code enum
+template<>
+struct std::is_error_code_enum<InputError> : public std::true_type {};
+
+// Mapping from error code enum to category
+std::error_code make_error_code(InputError e) {
+    static auto category = InputErrorCategory{};
+    return std::error_code(static_cast<int>(e), category);
+    //return std::error_code(std::to_underlying(e), category);
+}
