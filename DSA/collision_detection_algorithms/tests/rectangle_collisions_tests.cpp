@@ -1,4 +1,3 @@
-#include "include.h"
 #include "rectangle_collisions.hpp"
 
 TEST(AxisAlignedRectangleCollision_test, RectanglePointsInvalid) {

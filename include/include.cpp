@@ -189,3 +189,9 @@ void DeleteList(ListNode*& curr) {
     curr = nullptr;
     assert(curr == nullptr);
 }
+
+std::error_code make_error_code(InputError e) {
+    static auto category = InputErrorCategory{};
+    return std::error_code(static_cast<int>(e), category);
+    //return std::error_code(std::to_underlying(e), category);
+}

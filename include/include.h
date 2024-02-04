@@ -86,8 +86,4 @@ template<>
 struct std::is_error_code_enum<InputError> : public std::true_type {};
 
 // Mapping from error code enum to category
-std::error_code make_error_code(InputError e) {
-    static auto category = InputErrorCategory{};
-    return std::error_code(static_cast<int>(e), category);
-    //return std::error_code(std::to_underlying(e), category);
-}
+std::error_code make_error_code(InputError e); 

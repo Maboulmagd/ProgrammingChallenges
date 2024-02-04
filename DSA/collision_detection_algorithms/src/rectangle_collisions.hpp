@@ -5,8 +5,8 @@
 
 #include "include.h"
 
-constexpr float EPSILON_FLOAT = 1e-9f;
-constexpr double EPSILON_DOUBLE = 1e-9;
+constexpr float EPSILON_FLOAT = 0.0000001f;
+constexpr double EPSILON_DOUBLE = 0.0000001;
 
 template <typename T>
 std::pair<std::error_code, bool> is_point_in_axis_aligned_rectangle(Point2D<T> p, Point2D<T> a, Point2D<T> b) noexcept {
