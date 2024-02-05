@@ -3,28 +3,72 @@
 #ifndef HASHMAP_HPP
 #define HASHMAP_HPP
 
+#include "include.h"
+
 #include <iostream>
 #include <vector>
 #include <list>
 #include <utility>
+#include <concepts>
 
 // We want to implement the basic functionality of insert, find, and delete
 // Then we want to make this container thread-safe, but with fine-grained locks (locking just the bucket of interest) on insert/find/delete
-
 namespace DSA::hash_map {
+static constexpr float EPSILON_FLOAT = 0.0000001f;
+
+template <typename Key>
+concept HashableKey = requires(const Key& key) {
+    { std::hash<Key>{}(key) } -> std::convertible_to<std::size_t>;
+};
+
+// Alias HashableKey as Key for convenience
+template <HashableKey K>
+using Key = K;
+
 template <typename K, typename V>
 class HashMap final {
 public:
+    explicit HashMap() : num_buckets_(2), total_elements_(0), load_factor_(0.75f), growth_factor_(2) {
+        buffer_ = new std::list<std::pair<K, V>>[num_buckets_];
+        assert(buffer_ != nullptr);
+    }
+
+    ~HashMap() {
+        delete[] buffer_;
+    }
+
     void insert(const std::pair<K, V>& key_val) {
-        
+        std::size_t key_hash = std::hash<K>{key_val.first} % num_buckets_;
+
+        // Need to check if key_val.first already exists in that list, if exists, simply update value
+        auto it = get_index(key_hash, key_val);
+        if (it == buffer_[key_hash].cend()) {// Insert
+            // Prior to inserting, let's check the load factor and resize, if need be
+
+            const float lf = total_elements_ / num_buckets_;
+            if ((lf - load_factor_) <= EPSILON_FLOAT) {// Time to resize
+                resize();
+            }
+
+            // Before inserting, let's recompute hash, then finally insert
+            key_hash = std::hash<K>(key_val.first) % num_buckets_;
+            buffer_[key_hash].push_back(key_val);
+
+            ++total_elements_;
+        }
+        else {// Simply update value
+            it->second = key_val.second;
+        }
     }
 
     std::size_t size() const {
-        return 0;
+        return total_elements_;
     }
 
     V& operator[](const K& key) {
+        // Check if its in our map first, if it is, simply grab the value
         
+        // If not in our hashmap, then insert, but need some default V value...?
     }
 
     friend std::ostream& operator<<(std::ostream& os, const HashMap<K, V>& map) {
@@ -32,13 +76,45 @@ public:
     }
 
 private:
-    void resize() {
+    auto get_iterator(const std::size_t lookup_bucket, const std::pair<K, V>& key_val_to_insert) const {
+        const std::list<std::pair<K, V>>& lst = buffer_[lookup_bucket];
 
+        auto it = lst.cbegin();
+        for (; it != lst.cend(); ++it) {
+            if (it->first == key_val_to_insert.first) {
+                return it;
+            }
+        }
+
+        return it;// Will return cend
     }
 
-    std::size_t buffer_size_;
-    std::vector<std::list<std::pair<K, V>>> buffer_;
-    std::size_t total_elements_;    
+    void resize() {
+        // Allocate new array
+        const std::size_t new_num_buckets = num_buckets_ * growth_factor_;
+        std::list<std::pair<K, V>>* new_buffer = new std::list<std::pair<K, V>>[new_num_buckets];
+
+        // Copy over all old elements
+        for (std::size_t i = 0; i < num_buckets_; ++i) {
+            const std::list<std::pair<K, V>>& lst = buffer_[i];
+            for (auto it = lst.cbegin(); it != lst.cend(); ++it) {
+                const std::size_t key_hash = std::hash<K>{it->first} % new_num_buckets;// Make sure to modulo by new_num_buckets_!
+
+                new_buffer[key_hash].push_back(*it);
+            }
+        }
+
+        // Update num_buckets_ and buffer_ to point to new_buffer
+        delete[] buffer_;
+        buffer_ = new_buffer;
+        num_buckets_ = new_num_buckets;
+    }
+
+    std::size_t num_buckets_;
+    std::list<std::pair<K, V>>* buffer_;
+    std::size_t total_elements_;
+    const float load_factor_;
+    const std::size_t growth_factor_;
 };
 }
 
