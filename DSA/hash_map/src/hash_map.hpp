@@ -18,7 +18,7 @@ static constexpr float EPSILON_FLOAT = 0.0000001f;
 
 template <typename Key>
 concept HashableKey = requires(const Key& key) {
-    { std::hash<Key>{}(key) } -> std::convertible_to<std::size_t>;
+    { std::hash<Key>{}(key) } -> std::convertible_to<int64_t>;
 };
 
 // Alias HashableKey as K for convenience
@@ -45,27 +45,48 @@ public:
     }
 
     void insert(const std::pair<K, V>& key_val) {
-        std::size_t bucket = std::hash<K>{key_val.first} % num_buckets_;
+        std::size_t bucket = std::hash<K>{}(key_val.first) % num_buckets_;
 
         // Need to check if key_val.first already exists in that list, if exists, simply update value
         auto it = get_iterator(bucket, key_val.first);
-        if (it == buffer_[bucket].cend()) {// Insert
+        if (it == buffer_[bucket].end()) {// Insert
             // Prior to inserting, let's check the load factor and resize, if need be
 
             const float lf = total_elements_ / num_buckets_;
-            if ((lf - load_factor_) <= EPSILON_FLOAT) {// Time to resize
+            if ((lf - load_factor_) >= EPSILON_FLOAT) {// Time to resize
                 resize();
             }
 
             // Before inserting, let's recompute hash, then finally insert
-            bucket = std::hash<K>(key_val.first) % num_buckets_;
+            bucket = std::hash<K>{}(key_val.first) % num_buckets_;
             buffer_[bucket].push_back(key_val);
+
+            assert(buffer_[bucket].size() > 0);
+            assert(buffer_[bucket].back().first == key_val.first);
+            assert(buffer_[bucket].back().second == key_val.second);
 
             ++total_elements_;
         }
         else {// Simply update value
             it->second = key_val.second;
         }
+    }
+
+    void erase(const K& key_to_erase) {
+        // First let's check if key even exists
+        std::size_t bucket = std::hash<K>{}(key_to_erase) % num_buckets_;
+
+        auto it = get_iterator(bucket, key_to_erase);
+        if (it == buffer_[bucket].cend()) { return; }// Don't do anything, nothing to erase
+
+        buffer_[bucket].erase(it);
+        --total_elements_;
+
+        assert(get_iterator(bucket, key_to_erase) == buffer_[bucket].cend());
+    }
+
+    const std::list<std::pair<K, V>>* get_buffer() const {
+        return buffer_;
     }
 
     std::size_t bucket_count() const {
@@ -78,37 +99,46 @@ public:
 
     V& operator[](const K& key) {
         // Check if its in our map first, if not, then insert with default value V
-        std::size_t bucket = std::hash<K>{key} % num_buckets_;
+        std::size_t bucket = std::hash<K>{}(key) % num_buckets_;
 
         auto it = get_iterator(bucket, key);
-        if (it == buffer_[bucket].cend()) {// Insert
+        if (it == buffer_[bucket].end()) {// Insert
             insert(std::make_pair(key, V{}));
-        }
 
-        // Need to recalculate hash, since buffer may have been resized after possible insert
-        bucket = std::hash<K>{key} % num_buckets_;
-        it = get_iterator(bucket, key);
-        assert(it != buffer_[bucket].cend());
+            // Need to recalculate hash, since buffer may have been resized after possible insert
+            bucket = std::hash<K>{}(key) % num_buckets_;
+            it = get_iterator(bucket, key);
+            assert(it != buffer_[bucket].end());
+        }
 
         return it->second;
     }
 
     friend std::ostream& operator<<(std::ostream& os, const HashMap<K, V>& map) {
+        const std::list<std::pair<K, V>>* buffer = map.get_buffer();
+
+        for (std::size_t i = 0; i < map.bucket_count(); ++i) {
+            const std::list<std::pair<K, V>>& lst = buffer[i];
+            for (auto it = lst.begin(); it != lst.end(); ++it) {
+                os << "Key: " << it->first << "\t" << "Value: " << it->second << '\n';
+            }
+        }
+
         return os;
     }
 
 private:
     auto get_iterator(const std::size_t lookup_bucket, const K& key) const {
-        const std::list<std::pair<K, V>>& lst = buffer_[lookup_bucket];
+        std::list<std::pair<K, V>>& lst = buffer_[lookup_bucket];
 
-        auto it = lst.cbegin();
-        for (; it != lst.cend(); ++it) {
+        auto it = lst.begin();
+        for (; it != lst.end(); ++it) {
             if (it->first == key) {
                 return it;
             }
         }
 
-        return it;// Will return cend
+        return it;// Could return end
     }
 
     void resize() {
@@ -119,8 +149,8 @@ private:
         // Copy over all old elements
         for (std::size_t i = 0; i < num_buckets_; ++i) {
             const std::list<std::pair<K, V>>& lst = buffer_[i];
-            for (auto it = lst.cbegin(); it != lst.cend(); ++it) {
-                const std::size_t key_hash = std::hash<K>{it->first} % new_num_buckets;// Make sure to modulo by new_num_buckets_!
+            for (auto it = lst.begin(); it != lst.end(); ++it) {
+                const std::size_t key_hash = std::hash<K>{}(it->first) % new_num_buckets;// Make sure to modulo by new_num_buckets_!
 
                 new_buffer[key_hash].push_back(*it);
             }
