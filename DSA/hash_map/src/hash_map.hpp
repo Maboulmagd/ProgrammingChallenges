@@ -21,9 +21,16 @@ concept HashableKey = requires(const Key& key) {
     { std::hash<Key>{}(key) } -> std::convertible_to<std::size_t>;
 };
 
-// Alias HashableKey as Key for convenience
+// Alias HashableKey as K for convenience
 template <HashableKey K>
 using Key = K;
+
+template <typename Value>
+concept DefaultConstructibleValue = std::default_initializable<Value>;
+
+// Alias Value as V for convenience
+template <DefaultConstructibleValue V>
+using Value = V;
 
 template <typename K, typename V>
 class HashMap final {
@@ -38,11 +45,11 @@ public:
     }
 
     void insert(const std::pair<K, V>& key_val) {
-        std::size_t key_hash = std::hash<K>{key_val.first} % num_buckets_;
+        std::size_t bucket = std::hash<K>{key_val.first} % num_buckets_;
 
         // Need to check if key_val.first already exists in that list, if exists, simply update value
-        auto it = get_index(key_hash, key_val);
-        if (it == buffer_[key_hash].cend()) {// Insert
+        auto it = get_iterator(bucket, key_val.first);
+        if (it == buffer_[bucket].cend()) {// Insert
             // Prior to inserting, let's check the load factor and resize, if need be
 
             const float lf = total_elements_ / num_buckets_;
@@ -51,8 +58,8 @@ public:
             }
 
             // Before inserting, let's recompute hash, then finally insert
-            key_hash = std::hash<K>(key_val.first) % num_buckets_;
-            buffer_[key_hash].push_back(key_val);
+            bucket = std::hash<K>(key_val.first) % num_buckets_;
+            buffer_[bucket].push_back(key_val);
 
             ++total_elements_;
         }
@@ -61,14 +68,29 @@ public:
         }
     }
 
+    std::size_t bucket_count() const {
+        return num_buckets_;
+    }
+
     std::size_t size() const {
         return total_elements_;
     }
 
     V& operator[](const K& key) {
-        // Check if its in our map first, if it is, simply grab the value
-        
-        // If not in our hashmap, then insert, but need some default V value...?
+        // Check if its in our map first, if not, then insert with default value V
+        std::size_t bucket = std::hash<K>{key} % num_buckets_;
+
+        auto it = get_iterator(bucket, key);
+        if (it == buffer_[bucket].cend()) {// Insert
+            insert(std::make_pair(key, V{}));
+        }
+
+        // Need to recalculate hash, since buffer may have been resized after possible insert
+        bucket = std::hash<K>{key} % num_buckets_;
+        it = get_iterator(bucket, key);
+        assert(it != buffer_[bucket].cend());
+
+        return it->second;
     }
 
     friend std::ostream& operator<<(std::ostream& os, const HashMap<K, V>& map) {
@@ -76,12 +98,12 @@ public:
     }
 
 private:
-    auto get_iterator(const std::size_t lookup_bucket, const std::pair<K, V>& key_val_to_insert) const {
+    auto get_iterator(const std::size_t lookup_bucket, const K& key) const {
         const std::list<std::pair<K, V>>& lst = buffer_[lookup_bucket];
 
         auto it = lst.cbegin();
         for (; it != lst.cend(); ++it) {
-            if (it->first == key_val_to_insert.first) {
+            if (it->first == key) {
                 return it;
             }
         }
