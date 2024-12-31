@@ -1,0 +1,5 @@
+project(my_unique_ptr_src)
+
+add_library(my_unique_ptr_src my_unique_ptr.hpp)
+target_include_directories(my_unique_ptr_src PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(my_unique_ptr_src include)

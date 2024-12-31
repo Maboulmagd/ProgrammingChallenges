@@ -1,4 +1,5 @@
 project(DSA)
 
 add_subdirectory(hash_map)
+add_subdirectory(my_unique_ptr)
 add_subdirectory(collision_detection_algorithms)

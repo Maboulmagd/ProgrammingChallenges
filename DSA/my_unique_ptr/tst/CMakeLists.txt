@@ -1,0 +1,4 @@
+project(my_unique_ptr_tests)
+
+add_executable(my_unique_ptr_tests my_unique_ptr_tests.cpp)
+target_link_libraries(my_unique_ptr_tests my_unique_ptr_src include)
